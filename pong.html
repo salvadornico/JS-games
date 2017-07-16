@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<title>Pong</title>
+	</head>
+
+	<body>
+
+		<canvas id="gameCanvas" width="1000" height="600"></canvas>
+
+	<script>
+
+		// Declare all variables that will be used outside onload() here; otherwise, they'll be limited to the context of the onload function
+		var canvas, canvasContext
+		const PADDLE_HEIGHT = 100
+		const PADDLE_WIDTH = 10
+
+		var ballX = 50
+		var ballY = 50
+		var ballSpeedX = 10
+		var ballSpeedY = 6
+		var deltaDampening = 0.35
+
+		var paddle1Y = 250
+		var paddle2Y = 250
+		
+		var playerScore = 0
+		var computerScore = 0
+		const WINNING_SCORE = 7
+
+		var showingWinScreen = false
+		var winMessage = ""
+
+		window.onload = function() {
+
+			canvas = document.getElementById("gameCanvas")
+			canvasContext = canvas.getContext("2d")
+
+			var framesPerSecond = 30
+			setInterval(function() {
+				moveEverything()
+				drawEverything()
+			}, 1000 / framesPerSecond)
+
+			canvas.addEventListener("mousemove", function(evt) {
+				var mousePos = calculateMousePosition(evt)
+				paddle1Y = mousePos.y - (PADDLE_HEIGHT / 2)
+			})
+			document.addEventListener("keydown", function(e) {
+				var playerKeySpeed = 20
+				if (e.keyCode == 38) { paddle1Y -= playerKeySpeed }
+				else if (e.keyCode == 40) { paddle1Y += playerKeySpeed }
+			})
+	
+		}
+
+		function moveEverything() {
+			if (showingWinScreen) { return }
+
+			computerMovement()
+
+			// increment position to move object
+			ballX += ballSpeedX
+			ballY += ballSpeedY
+			// handles collisions with the top & bottom edges of the canvas
+			if (ballY > canvas.height || ballY < 0) { ballSpeedY = -ballSpeedY }
+
+			// handles collision with left paddle or resets ball when it touches left side
+			if (ballX < PADDLE_WIDTH && ballY > paddle1Y && ballY < paddle1Y + PADDLE_HEIGHT) {
+				ballSpeedX = -ballSpeedX
+				// Adds extra acceleration and angle to edge shots
+				var deltaY = ballY - (paddle1Y + (PADDLE_HEIGHT / 2))
+				ballSpeedY = deltaY * deltaDampening
+			} else if (ballX < 0) {
+				computerScore++ // should be before reset to tally final score in time
+				ballReset()
+			}
+
+			// handles collision with right paddle / right edge
+			if (ballX > (canvas.width - PADDLE_WIDTH) && ballY > paddle2Y && ballY < paddle2Y + PADDLE_HEIGHT) {
+				ballSpeedX = -ballSpeedX
+				var deltaY = ballY - (paddle2Y + (PADDLE_HEIGHT / 2))
+				ballSpeedY = deltaY * deltaDampening
+			} else if (ballX > (canvas.width)) {
+				playerScore++
+				ballReset()
+			}
+		}
+
+		function computerMovement() {
+			var paddle2YCenter = paddle2Y + (PADDLE_HEIGHT / 2)
+			var paddleOffset = 30
+			var paddle2speed = 6
+			
+			if (paddle2YCenter < ballY - paddleOffset) {
+				paddle2Y += paddle2speed
+			} else if (paddle2YCenter > ballY + paddleOffset) {
+				paddle2Y -= paddle2speed
+			}
+		}
+
+		function ballReset() {
+			if (playerScore >= WINNING_SCORE) {
+				winMessage = "You win!"
+				showWinScreen()
+			} else if (computerScore >= WINNING_SCORE) {
+				winMessage = "You lose :("
+				showWinScreen()
+			}
+
+			ballSpeedX = -ballSpeedX
+			ballX = canvas.width / 2
+			ballY = canvas.height / 2
+		}
+
+		function showWinScreen() {
+			playerScore = 0
+			computerScore = 0
+			showingWinScreen = true
+		}
+
+		function drawEverything() {
+			// blanks out screen
+			colorRect(0, 0, canvas.width, canvas.height, "black")
+
+			// win screen
+			if (showingWinScreen) {
+				colorText(winMessage, 100, 100, "white")
+				colorText("Click or press any key to continue", 100, 120, "white")
+				canvas.addEventListener("click", function() {
+					showingWinScreen = false
+				})
+				document.addEventListener("keydown", function() {
+					showingWinScreen = false
+				})
+				return
+			}
+
+			drawNet();
+			// left player paddle
+			colorRect(0, paddle1Y, PADDLE_WIDTH, PADDLE_HEIGHT, "white")
+			// computer paddle
+			colorRect(canvas.width - PADDLE_WIDTH, paddle2Y, PADDLE_WIDTH, PADDLE_HEIGHT, "white")
+			// ball
+			colorCircle(ballX, ballY, 10, "#EAFF3A")
+
+			colorText(playerScore, 100, 100, "white")	
+			colorText(computerScore, canvas.width - 100, 100, "white")	
+		}
+
+		function drawNet() {
+			for (var i = 0; i < canvas.height; i+= 40) {
+				colorRect((canvas.width / 2) - 1, i, 2, 20, "white")
+			}
+		}
+
+		function colorRect(leftX, topY, width, height, drawColor) {
+			canvasContext.fillStyle = drawColor
+			canvasContext.fillRect(leftX, topY, width, height)
+		}
+
+		function colorCircle(centerX, centerY, radius, drawColor) {
+			canvasContext.fillStyle = drawColor
+			canvasContext.beginPath()
+			canvasContext.arc(centerX, centerY, radius, 0, Math.PI * 2, true)
+			canvasContext.fill()
+		}
+
+		function colorText(text, leftX, topY, drawColor) {
+			canvasContext.fillStyle = drawColor
+			canvasContext.fillText(text, leftX, topY)
+		}
+
+		function calculateMousePosition(evt) {
+			var rect = canvas.getBoundingClientRect()
+			var root = document.documentElement
+			var mouseX = evt.clientX - rect.left - root.scrollLeft
+			var mouseY = evt.clientY - rect.top - root.scrollTop
+			return { x:mouseX, y:mouseY }
+		}
+
+	</script>
+
+	</body>
+
+</html>
